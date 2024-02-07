@@ -13,6 +13,5 @@ Create a conda environment with the following command:
 conda env create -f environment.yml
 ```
 
-## Data
+You also need to set up the environment variables in [src/diffusion/environments/environments.py](src/diffusion/environments/environments.py).
 
-Download and explore the data [in this notebook](notebooks/download-and-explore-dataset.ipynb).
