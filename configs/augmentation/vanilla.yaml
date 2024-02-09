@@ -1,2 +1,0 @@
-augmenter_class: VanillaAugmentation
-augmenter_kwargs: {}

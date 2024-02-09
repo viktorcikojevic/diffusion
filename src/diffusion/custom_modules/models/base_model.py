@@ -19,11 +19,12 @@ class BaseDenoiser(ABC, torch.nn.Module):
         """
         pass
 
-    def predict(self, img: torch.Tensor) -> DenoiserOutput:
+    def predict(self, img: torch.Tensor, timesteps: torch.Tensor) -> DenoiserOutput:
         """
 
-        :param img: torch.Tensor: (b, c, z, h, w)
+        :param img: torch.Tensor: (b, c, h, w)
+        :param timesteps: torch.Tensor: (b, )
         :return: DenoiserOutput:
-            - pred: (b, z1, h, w)
+            - pred: (b, c, h, w)
         """
         pass

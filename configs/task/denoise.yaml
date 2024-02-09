@@ -1,4 +1,3 @@
-type: "DenoiseTask"
+type: "DenoisingTask"
 kwargs:
-  std_noise: 0.15
   ema_momentum: 0.00025
