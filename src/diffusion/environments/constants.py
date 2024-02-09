@@ -1,5 +1,5 @@
 from pathlib import Path
-from sennet.environments.environments import DATA_DUMPS_DIR, DATA_DIR, MODEL_OUT_DIR
+from diffusion.environments.environments import DATA_DUMPS_DIR, DATA_DIR, MODEL_OUT_DIR
 
 
 # example code for environments.py
