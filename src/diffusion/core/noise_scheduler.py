@@ -36,6 +36,7 @@ class DDPMScheduler():
             )
             self.alpha_t = 1 - self.beta_t
             self.alpha_t_bar = np.cumprod(self.alpha_t)
+            self.sigma_t = np.sqrt(self.beta_t)
         else:
             raise NotImplementedError(f"unknown beta schedule: {self.noise_scheduler}")
         

@@ -1,0 +1,9 @@
+sampler:
+  diffusion_steps: 100
+
+predictors:
+  model_dir: WrappedUNetModel-bs64-abs64-llr-3.5-emaTrue-2024-02-09-14-06-35
+
+output:
+  save_all: True
+  save_dir: /opt/diffusion/data_dumps/samples/${predictors.model_dir}

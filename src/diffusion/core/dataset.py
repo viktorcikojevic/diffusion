@@ -14,6 +14,7 @@ class CIFAR10DiffusionDataset(CIFAR10):
     ) -> None:
         
         super().__init__(root=root, download=download)
+        self.img_width_height=(32,32)
         
     def __len__(self):
         return len(self.data)

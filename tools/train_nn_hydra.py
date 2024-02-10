@@ -1,19 +1,18 @@
 from pytorch_lightning.loggers import WandbLogger
 import pytorch_lightning as pl
-from diffusion.environments.constants import MODEL_OUT_DIR, PRETRAINED_DIR
-from diffusion.core.tasks import DenoisingTask
-from diffusion.core.dataset import CIFAR10DiffusionDataset
-from diffusion.custom_modules.models.base_model import BaseDenoiser
-from diffusion.core.noise_scheduler import DDPMScheduler
-# from pytorch_lightning.strategies import DeepSpeedStrategy
-from torch.utils.data import DataLoader, TensorDataset
-import diffusion.custom_modules.models as models
 from datetime import datetime
 from omegaconf import DictConfig, OmegaConf
 from typing import Dict
 import hydra
 import torch
 import json
+
+import diffusion.custom_modules.models as models
+from diffusion.environments.constants import MODEL_OUT_DIR, PRETRAINED_DIR
+from diffusion.core.tasks import DenoisingTask
+from diffusion.custom_modules.models.base_model import BaseDenoiser
+from diffusion.core.noise_scheduler import DDPMScheduler
+from diffusion.core.dataset_factory import build_train_val_dataloaders
 
 
 @hydra.main(config_path="../configs", config_name="train", version_base="1.2")
@@ -45,33 +44,8 @@ def main(cfg: DictConfig):
     model_out_dir.mkdir(exist_ok=True, parents=True)
     print(f"{model_out_dir = }")
 
-    dataset = CIFAR10DiffusionDataset()
     
-    # train test split 
-    train_pct = cfg.train_pct
-    train_len = int(len(dataset) * train_pct)
-    val_len = len(dataset) - train_len
-    train_dataset, val_dataset = torch.utils.data.random_split(dataset, [train_len, val_len])
-    print(f"Train data count: {train_len}")
-    print(f"Validation data count: {val_len}")
-    
-    
-    train_loader = DataLoader(
-        train_dataset,
-        batch_size=cfg.apparent_batch_size,
-        shuffle=True,
-        num_workers=cfg.num_workers,
-        pin_memory=True,
-        drop_last=True,
-    )
-    val_loader = DataLoader(
-        val_dataset,
-        batch_size=2*cfg.apparent_batch_size,
-        shuffle=False,
-        num_workers=0,
-        pin_memory=True,
-        drop_last=False,
-    )
+    train_loader, val_loader = build_train_val_dataloaders(cfg)
 
     OmegaConf.save(cfg, model_out_dir / "config.yaml", resolve=True)
 
@@ -110,11 +84,6 @@ def main(cfg: DictConfig):
         logger.experiment.config["model_full"] = str(model)
         callbacks.append(pl.callbacks.LearningRateMonitor())
     callbacks += [
-        pl.callbacks.ModelCheckpoint(
-            dirpath=model_out_dir,
-            save_top_k=-1,
-            filename=f"{cfg.model.type}" + "-{epoch:02d}",
-        ),
         pl.callbacks.ModelCheckpoint(
             dirpath=model_out_dir,
             save_top_k=1,
