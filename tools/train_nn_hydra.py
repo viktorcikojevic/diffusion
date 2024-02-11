@@ -108,7 +108,7 @@ def main(cfg: DictConfig):
         max_epochs=cfg.max_epochs,
         max_steps=cfg.max_steps,
         benchmark=True,
-        log_every_n_steps=20,
+        log_every_n_steps=200,
         # gradient_clip_val=2.0,
         # gradient_clip_algorithm="norm",
         accumulate_grad_batches=accumulate_grad_batches,

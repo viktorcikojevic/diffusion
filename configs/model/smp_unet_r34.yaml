@@ -1,3 +1,0 @@
-type: WrappedUNetModel
-kwargs:
-    version: "from_improved_ddpm_paper"

@@ -7,6 +7,9 @@ from pathlib import Path
 from tqdm import tqdm
 import numpy as np
 from PIL import Image
+import matplotlib.pyplot as plt
+from moviepy.editor import ImageSequenceClip
+
 
 from diffusion.environments.constants import MODEL_OUT_DIR, PRETRAINED_DIR
 from diffusion.core.tasks import DenoisingTask
@@ -61,7 +64,10 @@ def main(cfg: DictConfig):
     for step in tqdm(diffusion_steps_vals, total=diffusion_steps):
         timestep = torch.Tensor([step]).to(device)
         z_img = torch.randn(1, 3, height, width).to(device)
-        sigma_t = noise_scheduler.sigma_t[step]
+        if step == 0:
+            sigma_t = 0.
+        else:
+            sigma_t = noise_scheduler.sigma_t[step]
         alpha_t = noise_scheduler.alpha_t[step]
         alpha_t_bar = noise_scheduler.alpha_t_bar[step]
         
@@ -78,6 +84,14 @@ def main(cfg: DictConfig):
             img_pil = Image.fromarray(np.uint8(img_np))
             step_process = diffusion_steps - step
             img_pil.save(save_dir / "imgs" / f"step_{step_process}.png")
+        else:
+            if step == 0:
+                img_np = img.squeeze().cpu().numpy()
+                # convert to pil and save
+                img_np = 255 * (img_np - img_np.min()) / (img_np.max() - img_np.min())
+                img_np = np.transpose(img_np, (1, 2, 0))
+                img_pil = Image.fromarray(np.uint8(img_np))
+                img_pil.save(save_dir / "output.png")
             
             
     if save_all:
@@ -91,6 +105,21 @@ def main(cfg: DictConfig):
         # Save the images as a GIF
         gif_path = save_dir / "output.gif"
         imgs[0].save(gif_path, save_all=True, append_images=imgs[1:], optimize=False, duration=100, loop=0)
+        
+        # Convert img_paths to string paths because ImageSequenceClip expects paths
+        img_paths_str = [str(img_path) for img_path in img_paths]
+        
+        # Calculate frame rate to make the video last 15 seconds
+        total_images = len(img_paths)
+        video_duration = 15  # seconds
+        frame_rate = total_images / video_duration
+        
+        # Create a video clip
+        clip = ImageSequenceClip(img_paths_str, fps=frame_rate)
+        
+        # Save the video as an MP4 file
+        mp4_path = str(save_dir / "output.mp4")
+        clip.write_videofile(mp4_path, codec='libx264')
 
 
 

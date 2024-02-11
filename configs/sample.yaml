@@ -1,8 +1,10 @@
 sampler:
-  diffusion_steps: 100
+  diffusion_steps: 4000
 
 predictors:
-  model_dir: WrappedUNetModel-bs64-abs64-llr-3.5-emaTrue-2024-02-09-14-06-35
+  model_dir: WrappedUNetModel-bs128-abs128-llr-4-emaFalse-2024-02-11-03-26-21
+
+
 
 output:
   save_all: True

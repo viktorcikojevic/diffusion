@@ -1,6 +1,6 @@
 defaults:
   - _self_
-  - model: smp_unet_r34  
+  - model: unet_ddpm  
   - augmentation: noop
   - early_stopping: normal
   - scheduler: none
@@ -10,13 +10,13 @@ defaults:
   - override hydra/sweeper/sampler: tpe
 
 val_check_interval: 20000                 # check validation every `val_check_interval`` steps
-batch_size: 64                             # final batch size.
-apparent_batch_size: 64                    # batch size during training
+batch_size: 128                             # final batch size.
+apparent_batch_size: 128                    # batch size during training
 num_workers: 1                            # number of workers for data loading
 dry_logger: false                          # if true, will not log to wandb
 exp_name: "ddpm_reproduce"                  # name of the experiment    
 group_name: "first_run"  # maybe this would be useful for grouping experiments when we do hyperparameter search
-max_epochs: 2000
+max_epochs: 250
 max_steps: -1
 early_stopping_metric: "val_loss"
 
@@ -28,7 +28,7 @@ train_pct: 0.8   # Percentage of the dataset to use for training
 
 noise_scheduler:
   kwargs:
-    num_diffusion_timesteps: 50     # Number of diffusion steps
+    num_diffusion_timesteps: 4000     # Number of diffusion steps
     noise_scheduler: "linear"
 
 hydra:
