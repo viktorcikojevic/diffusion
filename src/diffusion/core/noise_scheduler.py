@@ -52,10 +52,20 @@ class DDPMScheduler():
         # generate random timesteps from 1 to num_diffusion_timesteps, B of those
         timesteps = torch.randint(1, self.num_diffusion_timesteps + 1, (B,))
         
-        alpha_t_bar = self.alpha_t_bar[timesteps - 1].to(img_device)
+        # get the weights for the current timestep
+        beta_t = self.beta_t[timesteps - 1]
+        sigma_t = torch.sqrt(beta_t)
+        alpha_t = 1 - beta_t
+        alpha_t_bar = self.alpha_t_bar[timesteps - 1]
+        weights = beta_t**2 / (2 * sigma_t**2 * alpha_t * (1 - alpha_t_bar))
+        
+        alpha_t_bar = alpha_t_bar.to(img_device)
         while len(alpha_t_bar.shape) < len(img.shape):
             alpha_t_bar = alpha_t_bar[..., None]
         img_noised = (torch.sqrt(alpha_t_bar) * img + torch.sqrt(1 - alpha_t_bar) * noise).float()
         timesteps = timesteps.to(img_device)
+        weights = weights.to(img_device)
         
-        return img_noised, noise, timesteps
+        
+        
+        return img_noised, noise, timesteps, weights
