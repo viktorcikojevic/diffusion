@@ -2,10 +2,9 @@ sampler:
   diffusion_steps: 4000
 
 predictors:
-  model_dir: WrappedUNetModel-bs128-abs128-llr-4-emaFalse-2024-02-11-03-26-21
-
+  model_dir: WrappedUNetModel-bs128-abs128-llr-3.7-emaTrue-2024-02-11-13-12-01
 
 
 output:
-  save_all: True
+  save_all: False
   save_dir: /opt/diffusion/data_dumps/samples/${predictors.model_dir}

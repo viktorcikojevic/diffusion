@@ -2,11 +2,11 @@ type: WrappedUNetModel
 kwargs:
     version: "from_improved_ddpm_paper"
     in_channels: 3
-    model_channels: 64
+    model_channels: 32
     out_channels: 3
     num_res_blocks: 3
     attention_resolutions: 
-        - 4
+        - 2
     dropout: 0.3
     channel_mult: 
         - 1
