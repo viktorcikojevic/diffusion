@@ -49,8 +49,6 @@ def main(cfg: DictConfig):
 
     OmegaConf.save(cfg, model_out_dir / "config.yaml", resolve=True)
 
-    criterion = torch.nn.L1Loss()
-
     
     accumulate_grad_batches = max(1, int(cfg.batch_size / cfg.apparent_batch_size))
     print(f"{accumulate_grad_batches = }")
@@ -66,7 +64,6 @@ def main(cfg: DictConfig):
         val_loader=val_loader,
         optimizer_spec=cfg_dict["optimizer"],
         experiment_name=experiment_name,
-        criterion=criterion,
         noise_scheduler=noise_scheduler,
         scheduler_spec=cfg_dict["scheduler"],
         accumulate_grad_batches=accumulate_grad_batches,

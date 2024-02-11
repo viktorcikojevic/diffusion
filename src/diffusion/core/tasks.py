@@ -43,7 +43,6 @@ class DenoisingTask(pl.LightningModule):
             val_loader: DataLoader,
             optimizer_spec: Dict[str, Any],
             experiment_name: str,
-            criterion: nn.Module,
             noise_scheduler: DDPMScheduler,
             ema_momentum: float | None = None,
             scheduler_spec: dict[str, Any] = None,
@@ -64,7 +63,6 @@ class DenoisingTask(pl.LightningModule):
         self.optimizer_spec = optimizer_spec
         self.scheduler_spec = scheduler_spec
         self.noise_scheduler = noise_scheduler
-        self.criterion = criterion
         self.experiment_name = experiment_name
         
         self.train_loader = train_loader
@@ -79,19 +77,29 @@ class DenoisingTask(pl.LightningModule):
         # generate label noise
         return img + time
         
+    def calculate_loss(self, noise_pred: torch.Tensor, noise: torch.Tensor, time: int, weights: torch.Tensor) -> torch.Tensor:
+        
+        # calculate loss
+        loss_per_sample = torch.nn.L1Loss(reduction="none")(noise_pred, noise)
+        while len(weights.shape) < len(loss_per_sample.shape):
+            weights = weights[..., None]
+        loss = loss_per_sample * weights / weights.mean()
+        loss = loss.mean()
+        
+        return loss
+    
     def training_step(self, batch: Dict, batch_idx: int):
         
         self.model = self.model.train()
         
         # generate label noise
         img = batch["img"]
-        img_noised, noise, timesteps = self.noise_scheduler.generate_denoising_data(img)
+        img_noised, noise, timesteps, weights = self.noise_scheduler.generate_denoising_data(img)
         
         # forward pass
         noise_pred = self.model.predict(img_noised, timesteps).pred
 
-        # calculate loss
-        loss = self.criterion(noise_pred, noise)
+        loss = self.calculate_loss(noise_pred, noise, timesteps, weights)
         
         current_lr = self.optimizers().optimizer.param_groups[0]['lr']
         self.log_dict({
@@ -119,11 +127,11 @@ class DenoisingTask(pl.LightningModule):
             
             # generate label noise
             img = batch["img"]
-            img_noised, noise, timesteps = self.noise_scheduler.generate_denoising_data(img)
+            img_noised, noise, timesteps, weights = self.noise_scheduler.generate_denoising_data(img)
             
             # forward pass
             noise_pred = model.predict(img_noised, timesteps).pred
-            loss = self.criterion(noise_pred, noise)
+            loss = self.calculate_loss(noise_pred, noise, timesteps, weights)
             
             self.total_val_loss += loss.cpu().item()
             self.val_count += 1
