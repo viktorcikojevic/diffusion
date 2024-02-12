@@ -28,9 +28,8 @@ class DDPMScheduler():
         Get a pre-defined beta schedule for the given name.
         """
         if self.noise_scheduler == "linear":
-            scale = 1000 / self.num_diffusion_timesteps
-            beta_start = scale * 0.0001
-            beta_end = scale * 0.02
+            beta_start = 0.0001
+            beta_end = 0.02
             self.beta_t = np.linspace(
                 beta_start, beta_end, self.num_diffusion_timesteps, dtype=np.float64
             )

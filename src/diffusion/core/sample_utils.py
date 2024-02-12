@@ -3,6 +3,8 @@ from collections import OrderedDict
 from pathlib import Path
 import yaml
 import torch
+from PIL import Image
+import numpy as  np
 
 from diffusion.custom_modules.models.base_model import BaseDenoiser
 import diffusion.custom_modules.models as models
@@ -75,3 +77,49 @@ def load_model_from_dir(model_dir: Path) -> tuple[dict, BaseDenoiser | None]:
         print(f"saved trimmed ckpt path: {trimmed_ckpt_path}")
     
     return cfg, model
+
+
+
+def sample_images(model, batch_size, noise_scheduler, diffusion_steps, height, width, save_all=False, save_last=False, save_dir=None):
+    
+    diffusion_steps_vals = np.arange(diffusion_steps)[::-1]
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    model = model.eval().to(device)
+    img = torch.randn(batch_size, 3, height, width).to(device)
+    
+    for step in diffusion_steps_vals:
+        timestep = torch.Tensor([step]).to(device)
+        z_img = torch.randn(1, 3, height, width).to(device)
+        if step == 0:
+            sigma_t = 0.
+        else:
+            sigma_t = noise_scheduler.sigma_t[step]
+        alpha_t = noise_scheduler.alpha_t[step]
+        alpha_t_bar = noise_scheduler.alpha_t_bar[step]
+        
+        with torch.no_grad():
+            model_out = model.predict(img, timestep).pred
+    
+        img = (1/np.sqrt(alpha_t)) * (img - (1-alpha_t)/np.sqrt(1-alpha_t_bar) * model_out) + sigma_t * z_img
+
+
+    return img
+
+    #     if save_all:
+    #         img_np = img.squeeze().cpu().numpy()
+    #         # convert to pil and save
+    #         img_np = 255 * (img_np - img_np.min()) / (img_np.max() - img_np.min())
+    #         img_np = np.transpose(img_np, (1, 2, 0))
+    #         img_pil = Image.fromarray(np.uint8(img_np))
+    #         step_process = diffusion_steps - step
+    #         img_pil.save(save_dir / "imgs" / f"step_{step_process}.png")
+    
+    # img_np = img.squeeze().cpu().numpy()
+    # # convert to pil and save
+    # img_np = 255 * (img_np - img_np.min()) / (img_np.max() - img_np.min())
+    # img_np = np.transpose(img_np, (1, 2, 0))
+    # img_pil = Image.fromarray(np.uint8(img_np))
+    # if save_last:
+    #     img_pil.save(save_dir / "output.png")
+    
+    # return img_pil

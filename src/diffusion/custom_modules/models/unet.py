@@ -150,9 +150,10 @@ class ResBlock(TimestepBlock):
 			normalization(self.out_channels),
 			SiLU(),
 			nn.Dropout(p=dropout),
-			zero_module(
-				conv_nd(dims, self.out_channels, self.out_channels, 3, padding=1)
-			),
+			conv_nd(dims, self.out_channels, self.out_channels, 3, padding=1)
+			# zero_module(
+			# 	conv_nd(dims, self.out_channels, self.out_channels, 3, padding=1)
+			# ),
 		)
 
 		if self.out_channels == channels:
@@ -199,7 +200,8 @@ class AttentionBlock(nn.Module):
 		self.norm = normalization(channels)
 		self.qkv = conv_nd(1, channels, channels * 3, 1)
 		self.attention = QKVAttention()
-		self.proj_out = zero_module(conv_nd(1, channels, channels, 1))
+		self.proj_out = conv_nd(1, channels, channels, 1)
+		# self.proj_out = zero_module(conv_nd(1, channels, channels, 1))
 
 	def forward(self, x):
      
@@ -402,7 +404,8 @@ class UNetModel(nn.Module):
 		self.out = nn.Sequential(
 			normalization(ch),
 			SiLU(),
-			zero_module(conv_nd(dims, model_channels, out_channels, 3, padding=1)),
+			conv_nd(dims, model_channels, out_channels, 3, padding=1)
+			# zero_module(conv_nd(dims, model_channels, out_channels, 3, padding=1)),
 		)
 
 

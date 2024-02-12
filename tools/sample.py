@@ -42,6 +42,8 @@ def main(cfg: DictConfig):
     # prepare the output directory
     save_dir = Path(cfg_dict["output"]["save_dir"])
     save_all = cfg_dict["output"]["save_all"]
+    save_last = cfg_dict["output"]["save_last"]
+    batch_size = cfg_dict["sampler"]["batch_size"]
     
     existing_dirs = list(save_dir.glob("*"))
     if len(existing_dirs) > 0:
@@ -59,11 +61,11 @@ def main(cfg: DictConfig):
     diffusion_steps_vals = np.arange(diffusion_steps)[::-1]
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     model = model.eval().to(device)
-    img = torch.randn(1, 3, height, width).to(device)
+    img = torch.randn(batch_size, 3, height, width).to(device)
     
     for step in tqdm(diffusion_steps_vals, total=diffusion_steps):
         timestep = torch.Tensor([step]).to(device)
-        z_img = torch.randn(1, 3, height, width).to(device)
+        z_img = torch.randn(batch_size, 3, height, width).to(device)
         if step == 0:
             sigma_t = 0.
         else:
@@ -84,14 +86,16 @@ def main(cfg: DictConfig):
             img_pil = Image.fromarray(np.uint8(img_np))
             step_process = diffusion_steps - step
             img_pil.save(save_dir / "imgs" / f"step_{step_process}.png")
-        else:
+        elif save_last:
             if step == 0:
                 img_np = img.squeeze().cpu().numpy()
                 # convert to pil and save
-                img_np = 255 * (img_np - img_np.min()) / (img_np.max() - img_np.min())
-                img_np = np.transpose(img_np, (1, 2, 0))
-                img_pil = Image.fromarray(np.uint8(img_np))
-                img_pil.save(save_dir / "output.png")
+                img_np = 255 * (img_np - np.min(img_np, axis=(1, 2, 3), keepdims=True)) / (np.max(img_np, axis=(1, 2, 3), keepdims=True) - np.min(img_np, axis=(1, 2, 3), keepdims=True))
+                
+                for img_idx in range(img_np.shape[0]):
+                    img_np_t = np.transpose(img_np[img_idx], (1, 2, 0))
+                    img_pil = Image.fromarray(np.uint8(img_np_t))
+                    img_pil.save(save_dir / "imgs" / f"output_{img_idx}.png")
             
             
     if save_all:

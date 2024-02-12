@@ -83,8 +83,13 @@ def main(cfg: DictConfig):
     callbacks += [
         pl.callbacks.ModelCheckpoint(
             dirpath=model_out_dir,
+            save_top_k=-1,
+            filename=f"{cfg.model.type}" + "-{epoch:02d}",
+        ),
+        pl.callbacks.ModelCheckpoint(
+            dirpath=model_out_dir,
             save_top_k=1,
-            monitor="val_loss" if cfg.task.type == "DenoisingTask" else "val_loss",
+            monitor="val_loss",
             mode="min",
             filename=f"{cfg.model.type}" + "-{epoch:02d}-{val_loss:.2f}",
         ),

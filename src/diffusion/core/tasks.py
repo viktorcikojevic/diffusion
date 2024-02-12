@@ -10,8 +10,6 @@ import torch.nn as nn
 import torch.optim
 import json
 import numpy as np
-from tqdm import tqdm
-
 
 class EMA(nn.Module):
     def __init__(self, model, momentum=0.00001):
@@ -137,9 +135,11 @@ class DenoisingTask(pl.LightningModule):
             self.val_count += 1
             
 
+
     def on_validation_epoch_end(self) -> None:
         with torch.no_grad():
             val_loss = self.total_val_loss / (self.val_count + 1e-6)
+            
             
             print("val_loss:")
             print(f"{val_loss = }")
