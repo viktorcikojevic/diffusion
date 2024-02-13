@@ -57,6 +57,8 @@ def main(cfg: DictConfig):
     print("noise_scheduler_kwargs")
     print(json.dumps(noise_scheduler_kwargs, indent=4))
     noise_scheduler = DDPMScheduler(**noise_scheduler_kwargs)
+    val_check_epochs = cfg.val_check_epochs
+    val_n_imgs = cfg.val_n_imgs
     
     task = DenoisingTask(
         model,
@@ -67,6 +69,8 @@ def main(cfg: DictConfig):
         noise_scheduler=noise_scheduler,
         scheduler_spec=cfg_dict["scheduler"],
         accumulate_grad_batches=accumulate_grad_batches,
+        val_check_epochs=val_check_epochs,
+        val_n_imgs=val_n_imgs,
         **cfg_dict["task"]["kwargs"],
     )
     callbacks = [
@@ -83,15 +87,17 @@ def main(cfg: DictConfig):
     callbacks += [
         pl.callbacks.ModelCheckpoint(
             dirpath=model_out_dir,
-            save_top_k=-1,
-            filename=f"{cfg.model.type}" + "-{epoch:02d}",
-        ),
-        pl.callbacks.ModelCheckpoint(
-            dirpath=model_out_dir,
-            save_top_k=1,
+            save_top_k=5,
             monitor="val_loss",
             mode="min",
             filename=f"{cfg.model.type}" + "-{epoch:02d}-{val_loss:.2f}",
+        ),
+        pl.callbacks.ModelCheckpoint(
+            dirpath=model_out_dir,
+            save_top_k=5,
+            monitor="fid_score",
+            mode="min",
+            filename=f"{cfg.model.type}" + "-{epoch:02d}-{fid_score:.2f}",
         ),
     ]
     

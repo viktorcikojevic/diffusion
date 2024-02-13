@@ -10,6 +10,11 @@ import torch.nn as nn
 import torch.optim
 import json
 import numpy as np
+from tempfile import TemporaryDirectory
+from torchvision.utils import save_image
+from torchmetrics.image.fid import FrechetInceptionDistance
+
+
 
 class EMA(nn.Module):
     def __init__(self, model, momentum=0.00001):
@@ -45,6 +50,8 @@ class DenoisingTask(pl.LightningModule):
             ema_momentum: float | None = None,
             scheduler_spec: dict[str, Any] = None,
             accumulate_grad_batches: int = 1,
+            val_check_epochs: int = 1,
+            val_n_imgs: int = 1000,
             **kwargs
     ):
         pl.LightningModule.__init__(self)
@@ -65,10 +72,13 @@ class DenoisingTask(pl.LightningModule):
         
         self.train_loader = train_loader
         self.accumulate_grad_batches = accumulate_grad_batches
+        self.val_check_epochs = val_check_epochs
+        self.val_n_imgs = val_n_imgs
             
         self.total_val_loss = 0.
         self.val_count = 0.
         self.best_val_loss = 9999.
+        self.height, self.width = CIFAR10DiffusionDataset().img_width_height
         
         
     def generate_noise(self, img: torch.Tensor, time: int) -> torch.Tensor:
@@ -134,24 +144,104 @@ class DenoisingTask(pl.LightningModule):
             self.total_val_loss += loss.cpu().item()
             self.val_count += 1
             
+    @torch.no_grad()
+    def generate_imgs(self):
+        
+        diffusion_steps = self.noise_scheduler.num_diffusion_timesteps
+        diffusion_steps_vals = np.arange(diffusion_steps)[::-1]
+        model = self._get_eval_model()
+        # get current device
+        device = self.device
+        img = torch.randn(self.val_n_imgs, 3, self.width, self.height).to(device)
+        
+        for step in diffusion_steps_vals:
+            timestep = torch.Tensor([step]).to(device)
+            z_img = torch.randn(self.val_n_imgs, 3, self.width, self.height).to(device)
+            if step == 0:
+                sigma_t = 0.
+            else:
+                sigma_t = self.noise_scheduler.sigma_t[step]
+            alpha_t = self.noise_scheduler.alpha_t[step]
+            alpha_t_bar = self.noise_scheduler.alpha_t_bar[step]
+            
+            with torch.no_grad():
+                model_out = model.predict(img, timestep).pred
+        
+            img = (1/np.sqrt(alpha_t)) * (img - (1-alpha_t)/np.sqrt(1-alpha_t_bar) * model_out) + sigma_t * z_img
 
+        return img
+    
+    def normalize_images_per_batch(self, tensor):
+        # tensor shape is (b, c, h, w)
+        min_vals = tensor.view(tensor.size(0), -1).min(dim=1, keepdim=True)[0]
+        max_vals = tensor.view(tensor.size(0), -1).max(dim=1, keepdim=True)[0]
+        
+        # reshape for broadcasting
+        min_vals = min_vals.view(tensor.size(0), 1, 1, 1)
+        max_vals = max_vals.view(tensor.size(0), 1, 1, 1)
+        
+        # normalize
+        normalized_tensor = (tensor - min_vals) / (max_vals - min_vals)
+        return normalized_tensor
+    
+    def calculate_fid_score(self):
+        
+        real_images = []
+        collecting = True
 
+        for batch in self.val_loader:
+            if not collecting:
+                break
+            for image in batch["img"]:
+                real_images.append(image)
+                if len(real_images) >= self.val_n_imgs:
+                    collecting = False
+                    break
+        
+        fake_images = self.generate_imgs().to('cpu')
+        real_images = torch.stack(real_images).to('cpu')
+        
+        fake_images = self.normalize_images_per_batch(fake_images)
+        real_images = self.normalize_images_per_batch(real_images)
+        
+        fid = FrechetInceptionDistance(normalize=True)
+        fid.update(real_images, real=True)
+        fid.update(fake_images, real=False)
+        
+        fid_score = float(fid.compute())
+        
+        return fid_score
+        
+        
     def on_validation_epoch_end(self) -> None:
         with torch.no_grad():
             val_loss = self.total_val_loss / (self.val_count + 1e-6)
             
+            # get epoch number
+            epoch = self.current_epoch
+            if epoch % self.val_check_epochs == 0:
+                fid_score = self.calculate_fid_score()
+            else:
+                fid_score = None
             
             print("val_loss:")
             print(f"{val_loss = }")
+            print(f"{fid_score = }")
             print("--------------------------------")
             if val_loss < self.best_val_loss:
                 self.best_val_loss = val_loss
             
             self.total_val_loss = 0.
             self.val_count = 0.
-            self.log_dict({
-                "val_loss": val_loss,
-            })
+            if fid_score is not None:
+                self.log_dict({
+                    "val_loss": val_loss,
+                    "fid_score": fid_score,
+                })
+            else:
+                self.log_dict({
+                    "val_loss": val_loss,
+                })
 
     def configure_optimizers(self):
         if self.optimizer_spec["kwargs"]["lr"] is None:
