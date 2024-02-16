@@ -2,7 +2,7 @@ from omegaconf import DictConfig
 import torch
 from torch.utils.data import DataLoader
 
-from diffusion.core.dataset import CIFAR10DiffusionDataset
+import diffusion.core.dataset as datasets
 
 
 def build_train_val_dataloaders(
@@ -10,10 +10,11 @@ def build_train_val_dataloaders(
 ) -> (DataLoader, DataLoader):
     
     
-    dataset = CIFAR10DiffusionDataset()
+    dataset_type = cfg["dataset"]["type"]
+    dataset = getattr(datasets, dataset_type)()
     
     # train test split 
-    train_pct = cfg.train_pct
+    train_pct = cfg["train_pct"]
     train_len = int(len(dataset) * train_pct)
     val_len = len(dataset) - train_len
     train_dataset, val_dataset = torch.utils.data.random_split(dataset, [train_len, val_len])
@@ -21,17 +22,18 @@ def build_train_val_dataloaders(
     print(f"Validation data count: {val_len}")
     
     
+    
     train_loader = DataLoader(
         train_dataset,
-        batch_size=cfg.apparent_batch_size,
+        batch_size=cfg["apparent_batch_size"],
         shuffle=True,
-        num_workers=cfg.num_workers,
+        num_workers=cfg["num_workers"],
         pin_memory=True,
         drop_last=True,
     )
     val_loader = DataLoader(
         val_dataset,
-        batch_size=2*cfg.apparent_batch_size,
+        batch_size=2*cfg["apparent_batch_size"],
         shuffle=False,
         num_workers=0,
         pin_memory=True,

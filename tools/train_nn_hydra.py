@@ -19,6 +19,7 @@ from diffusion.core.dataset_factory import build_train_val_dataloaders
 def main(cfg: DictConfig):
     
     cfg_dict: Dict = OmegaConf.to_container(cfg, resolve=True)
+    print(json.dumps(cfg_dict, indent=4))
     time_now = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
     
     # ---------------------------------------

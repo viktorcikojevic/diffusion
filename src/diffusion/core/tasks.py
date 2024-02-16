@@ -1,7 +1,7 @@
 from diffusion.core.noise_scheduler import DDPMScheduler
 from diffusion.environments.constants import PROCESSED_DATA_DIR, TMP_SUB_MMAP_DIR
-from diffusion.core.dataset import CIFAR10DiffusionDataset
 from diffusion.custom_modules.models import BaseDenoiser
+from diffusion.core.fid_evaluation import FIDEvaluation
 import pytorch_lightning as pl
 from typing import Dict, Any, List
 from torch.utils.data import DataLoader
@@ -13,8 +13,11 @@ import numpy as np
 from tempfile import TemporaryDirectory
 from torchvision.utils import save_image
 from torchmetrics.image.fid import FrechetInceptionDistance
-
-
+from tqdm import tqdm 
+from einops import rearrange, repeat
+from pytorch_fid.inception import InceptionV3
+from torch.nn.functional import adaptive_avg_pool2d
+from pytorch_fid.fid_score import calculate_frechet_distance
 
 class EMA(nn.Module):
     def __init__(self, model, momentum=0.00001):
@@ -78,7 +81,12 @@ class DenoisingTask(pl.LightningModule):
         self.total_val_loss = 0.
         self.val_count = 0.
         self.best_val_loss = 9999.
-        self.height, self.width = CIFAR10DiffusionDataset().img_width_height
+        self.height, self.width = train_loader.dataset.dataset.img_width_height
+        self.batch_size = train_loader.batch_size
+        
+        inception_block_idx = 2048
+        block_idx = InceptionV3.BLOCK_INDEX_BY_DIM[inception_block_idx]
+        self.inception_v3 = InceptionV3([block_idx]).to(self.device)
         
         
     def generate_noise(self, img: torch.Tensor, time: int) -> torch.Tensor:
@@ -145,18 +153,18 @@ class DenoisingTask(pl.LightningModule):
             self.val_count += 1
             
     @torch.no_grad()
-    def generate_imgs(self):
+    def generate_single_batch(self):
         
         diffusion_steps = self.noise_scheduler.num_diffusion_timesteps
         diffusion_steps_vals = np.arange(diffusion_steps)[::-1]
         model = self._get_eval_model()
         # get current device
         device = self.device
-        img = torch.randn(self.val_n_imgs, 3, self.width, self.height).to(device)
+        img = torch.randn(self.batch_size, 3, self.width, self.height).to(device)
         
         for step in diffusion_steps_vals:
             timestep = torch.Tensor([step]).to(device)
-            z_img = torch.randn(self.val_n_imgs, 3, self.width, self.height).to(device)
+            z_img = torch.randn(self.batch_size, 3, self.width, self.height).to(device)
             if step == 0:
                 sigma_t = 0.
             else:
@@ -171,6 +179,19 @@ class DenoisingTask(pl.LightningModule):
 
         return img
     
+    @torch.no_grad()
+    def generate_imgs(self):
+        
+        imgs = []
+        n_iters = self.val_n_imgs // self.batch_size
+        for _ in tqdm(range(n_iters), total=n_iters, desc="generating images for validation"):
+            img = self.generate_single_batch()
+            imgs.append(img)
+        
+        imgs = torch.stack(imgs, dim=0).view(-1, 3, self.width, self.height)
+        
+        return imgs
+    
     def normalize_images_per_batch(self, tensor):
         # tensor shape is (b, c, h, w)
         min_vals = tensor.view(tensor.size(0), -1).min(dim=1, keepdim=True)[0]
@@ -183,6 +204,19 @@ class DenoisingTask(pl.LightningModule):
         # normalize
         normalized_tensor = (tensor - min_vals) / (max_vals - min_vals)
         return normalized_tensor
+    
+    
+    def calculate_inception_features(self, samples):
+        
+        self.inception_v3.eval()
+        self.inception_v3 = self.inception_v3.to(self.device)
+        
+        features = self.inception_v3(samples.unsqueeze(0).float())[0]
+
+        if features.size(2) != 1 or features.size(3) != 1:
+            features = adaptive_avg_pool2d(features, output_size=(1, 1))
+        features = rearrange(features, "... 1 1 -> ...")
+        return features
     
     def calculate_fid_score(self):
         
@@ -198,17 +232,39 @@ class DenoisingTask(pl.LightningModule):
                     collecting = False
                     break
         
-        fake_images = self.generate_imgs().to('cpu')
-        real_images = torch.stack(real_images).to('cpu')
+        fake_images = self.generate_imgs().to(self.device)
+        real_images = torch.stack(real_images).to(self.device)
         
         fake_images = self.normalize_images_per_batch(fake_images)
         real_images = self.normalize_images_per_batch(real_images)
         
-        fid = FrechetInceptionDistance(normalize=True)
-        fid.update(real_images, real=True)
-        fid.update(fake_images, real=False)
+        # fid = FrechetInceptionDistance(normalize=True)
+        # fid.update(real_images, real=True)
+        # fid.update(fake_images, real=False)
+        # fid_score = float(fid.compute())
         
-        fid_score = float(fid.compute())
+        # generate features
+        stacked_real_features = []
+        for real_image in real_images:
+            real_features = self.calculate_inception_features(real_image)
+            stacked_real_features.append(real_features)
+        stacked_real_features = (
+            torch.cat(stacked_real_features, dim=0).cpu().numpy()
+        )
+        m_real = np.mean(stacked_real_features, axis=0)
+        s_real = np.cov(stacked_real_features, rowvar=False)
+        
+        stacked_fake_features = []
+        for fake_image in fake_images:
+            fake_features = self.calculate_inception_features(fake_image)
+            stacked_fake_features.append(fake_features)
+        stacked_fake_features = (
+            torch.cat(stacked_fake_features, dim=0).cpu().numpy()
+        )
+        m_fake = np.mean(stacked_fake_features, axis=0)
+        s_fake = np.cov(stacked_fake_features, rowvar=False)
+        
+        fid_score = calculate_frechet_distance(m_fake, s_fake, m_real, s_real)
         
         return fid_score
         
@@ -219,10 +275,10 @@ class DenoisingTask(pl.LightningModule):
             
             # get epoch number
             epoch = self.current_epoch
-            if epoch % self.val_check_epochs == 0:
+            if epoch > 0 and epoch % self.val_check_epochs == 0:
                 fid_score = self.calculate_fid_score()
             else:
-                fid_score = None
+                fid_score = 1e3
             
             print("val_loss:")
             print(f"{val_loss = }")

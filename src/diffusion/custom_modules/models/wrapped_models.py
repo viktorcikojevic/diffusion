@@ -32,4 +32,3 @@ class WrappedUNetModel(BaseDenoiser):
         )
         
         return out
-        

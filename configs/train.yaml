@@ -6,29 +6,26 @@ defaults:
   - scheduler: none
   - optimizer: adamw
   - task: denoise
+  - dataset: cifar10
   - override hydra/sweeper: optuna
   - override hydra/sweeper/sampler: tpe
 
 
 val_check_interval: 20000 # check validation loss every `val_check_interval` steps
-val_check_epochs: 100                # check fid score every `val_check_epochs` epochs
-val_n_imgs: 512
-batch_size: 128                             # final batch size.
-apparent_batch_size: 128                    # batch size during training
+val_check_epochs: 50                # check fid score every `val_check_epochs` epochs
+val_n_imgs: 256
+batch_size: 256                             # final batch size.
+apparent_batch_size: 256                    # batch size during training
 num_workers: 1                            # number of workers for data loading
 dry_logger: false                          # if true, will not log to wandb
 exp_name: "ddpm_reproduce"                  # name of the experiment    
 group_name: "first_run"  # maybe this would be useful for grouping experiments when we do hyperparameter search
-max_epochs: 1000
+max_epochs: 2000
 max_steps: -1
 early_stopping_metric: "val_loss"
 
 
 
-loss:
-  - type: L1Loss
-    weight: 1.0
-  
 train_pct: 0.8   # Percentage of the dataset to use for training
 
 noise_scheduler:

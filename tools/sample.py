@@ -13,7 +13,7 @@ from moviepy.editor import ImageSequenceClip
 
 from diffusion.environments.constants import MODEL_OUT_DIR, PRETRAINED_DIR
 from diffusion.core.tasks import DenoisingTask
-from diffusion.core.dataset import CIFAR10DiffusionDataset
+import diffusion.core.dataset as datasets
 from diffusion.custom_modules.models.base_model import BaseDenoiser
 from diffusion.core.noise_scheduler import DDPMScheduler
 import diffusion.custom_modules.models as models
@@ -37,7 +37,11 @@ def main(cfg: DictConfig):
     
     # prepare the dataloaders
     cfg["batch_size"] = 1
-    width, height = CIFAR10DiffusionDataset().img_width_height
+    dataset_type = cfg["dataset"]["type"]
+    dataset = getattr(datasets, dataset_type)()
+    width, height = dataset.img_width_height
+    
+    
     
     # prepare the output directory
     save_dir = Path(cfg_dict["output"]["save_dir"])
@@ -63,6 +67,7 @@ def main(cfg: DictConfig):
     model = model.eval().to(device)
     img = torch.randn(batch_size, 3, height, width).to(device)
     
+    
     for step in tqdm(diffusion_steps_vals, total=diffusion_steps):
         timestep = torch.Tensor([step]).to(device)
         z_img = torch.randn(batch_size, 3, height, width).to(device)
@@ -86,16 +91,16 @@ def main(cfg: DictConfig):
             img_pil = Image.fromarray(np.uint8(img_np))
             step_process = diffusion_steps - step
             img_pil.save(save_dir / "imgs" / f"step_{step_process}.png")
-        elif save_last:
+        if save_last:
             if step == 0:
-                img_np = img.squeeze().cpu().numpy()
+                img_np = img.cpu().numpy()
                 # convert to pil and save
                 img_np = 255 * (img_np - np.min(img_np, axis=(1, 2, 3), keepdims=True)) / (np.max(img_np, axis=(1, 2, 3), keepdims=True) - np.min(img_np, axis=(1, 2, 3), keepdims=True))
                 
                 for img_idx in range(img_np.shape[0]):
                     img_np_t = np.transpose(img_np[img_idx], (1, 2, 0))
                     img_pil = Image.fromarray(np.uint8(img_np_t))
-                    img_pil.save(save_dir / "imgs" / f"output_{img_idx}.png")
+                    img_pil.save(save_dir / f"output_{img_idx}.png")
             
             
     if save_all:
@@ -115,7 +120,7 @@ def main(cfg: DictConfig):
         
         # Calculate frame rate to make the video last 15 seconds
         total_images = len(img_paths)
-        video_duration = 15  # seconds
+        video_duration = 30  # seconds
         frame_rate = total_images / video_duration
         
         # Create a video clip

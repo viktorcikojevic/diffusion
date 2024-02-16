@@ -28,3 +28,13 @@ class BaseDenoiser(ABC, torch.nn.Module):
             - pred: (b, c, h, w)
         """
         pass
+    
+    def sample(self, img: torch.Tensor, timesteps: torch.Tensor) -> DenoiserOutput:
+        """
+        # samples new image from the model
+        
+        :param img: torch.Tensor: (b, c, h, w)
+        :return: DenoiserOutput:
+            - pred: (b, c, h, w)
+        """
+        pass

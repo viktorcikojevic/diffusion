@@ -49,13 +49,13 @@ class DDPMScheduler():
         
         noise = torch.randn(B, C, H, W).to(img_device)
         # generate random timesteps from 1 to num_diffusion_timesteps, B of those
-        timesteps = torch.randint(1, self.num_diffusion_timesteps + 1, (B,))
+        timesteps = torch.randint(0, self.num_diffusion_timesteps, (B,))
         
         # get the weights for the current timestep
-        beta_t = self.beta_t[timesteps - 1]
+        beta_t = self.beta_t[timesteps]
         sigma_t = torch.sqrt(beta_t)
         alpha_t = 1 - beta_t
-        alpha_t_bar = self.alpha_t_bar[timesteps - 1]
+        alpha_t_bar = self.alpha_t_bar[timesteps]
         weights = beta_t**2 / (2 * sigma_t**2 * alpha_t * (1 - alpha_t_bar))
         
         alpha_t_bar = alpha_t_bar.to(img_device)

@@ -17,3 +17,4 @@ multirun/
 *.db
 debug.ipynb
 *.bin
+results/*
