@@ -238,33 +238,37 @@ class DenoisingTask(pl.LightningModule):
         fake_images = self.normalize_images_per_batch(fake_images)
         real_images = self.normalize_images_per_batch(real_images)
         
-        # fid = FrechetInceptionDistance(normalize=True)
-        # fid.update(real_images, real=True)
-        # fid.update(fake_images, real=False)
-        # fid_score = float(fid.compute())
+        # convert to int8
+        fake_images = (fake_images * 255).to(torch.uint8)
+        real_images = (real_images * 255).to(torch.uint8)
         
-        # generate features
-        stacked_real_features = []
-        for real_image in real_images:
-            real_features = self.calculate_inception_features(real_image)
-            stacked_real_features.append(real_features)
-        stacked_real_features = (
-            torch.cat(stacked_real_features, dim=0).cpu().numpy()
-        )
-        m_real = np.mean(stacked_real_features, axis=0)
-        s_real = np.cov(stacked_real_features, rowvar=False)
+        fid = FrechetInceptionDistance().to(self.device)
+        fid.update(real_images, real=True)
+        fid.update(fake_images, real=False)
+        fid_score = float(fid.compute())
         
-        stacked_fake_features = []
-        for fake_image in fake_images:
-            fake_features = self.calculate_inception_features(fake_image)
-            stacked_fake_features.append(fake_features)
-        stacked_fake_features = (
-            torch.cat(stacked_fake_features, dim=0).cpu().numpy()
-        )
-        m_fake = np.mean(stacked_fake_features, axis=0)
-        s_fake = np.cov(stacked_fake_features, rowvar=False)
+        # # generate features
+        # stacked_real_features = []
+        # for real_image in real_images:
+        #     real_features = self.calculate_inception_features(real_image)
+        #     stacked_real_features.append(real_features)
+        # stacked_real_features = (
+        #     torch.cat(stacked_real_features, dim=0).cpu().numpy()
+        # )
+        # m_real = np.mean(stacked_real_features, axis=0)
+        # s_real = np.cov(stacked_real_features, rowvar=False)
         
-        fid_score = calculate_frechet_distance(m_fake, s_fake, m_real, s_real)
+        # stacked_fake_features = []
+        # for fake_image in fake_images:
+        #     fake_features = self.calculate_inception_features(fake_image)
+        #     stacked_fake_features.append(fake_features)
+        # stacked_fake_features = (
+        #     torch.cat(stacked_fake_features, dim=0).cpu().numpy()
+        # )
+        # m_fake = np.mean(stacked_fake_features, axis=0)
+        # s_fake = np.cov(stacked_fake_features, rowvar=False)
+        
+        # fid_score = calculate_frechet_distance(m_fake, s_fake, m_real, s_real)
         
         return fid_score
         
@@ -275,10 +279,10 @@ class DenoisingTask(pl.LightningModule):
             
             # get epoch number
             epoch = self.current_epoch
-            if epoch > 0 and epoch % self.val_check_epochs == 0:
+            if epoch % self.val_check_epochs == 0:
                 fid_score = self.calculate_fid_score()
             else:
-                fid_score = 1e3
+                fid_score = None
             
             print("val_loss:")
             print(f"{val_loss = }")

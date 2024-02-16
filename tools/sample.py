@@ -82,7 +82,7 @@ def main(cfg: DictConfig):
             model_out = model.predict(img, timestep).pred
     
         img = (1/np.sqrt(alpha_t)) * (img - (1-alpha_t)/np.sqrt(1-alpha_t_bar) * model_out) + sigma_t * z_img
-
+        
         if save_all:
             img_np = img.squeeze().cpu().numpy()
             # convert to pil and save

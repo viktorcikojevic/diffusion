@@ -17,7 +17,7 @@ val_n_imgs: 256
 batch_size: 256                             # final batch size.
 apparent_batch_size: 256                    # batch size during training
 num_workers: 1                            # number of workers for data loading
-dry_logger: false                          # if true, will not log to wandb
+dry_logger: true                          # if true, will not log to wandb
 exp_name: "ddpm_reproduce"                  # name of the experiment    
 group_name: "first_run"  # maybe this would be useful for grouping experiments when we do hyperparameter search
 max_epochs: 2000
