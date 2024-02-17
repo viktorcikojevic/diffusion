@@ -1,13 +1,12 @@
 sampler:
-  diffusion_steps: 1000
-  batch_size: 1
+  batch_size: 32
 
 predictors:
-  model_dir: WrappedUNetModel-bs256-abs256-llr-4.5-emaTrue-2024-02-14-11-02-12-last-model
+  model_dir: WrappedUNetModel-bs4-abs4-llr-4.5-emaTrue-2024-02-16-10-53-52-last-model
 
 
 
 output:
-  save_all: true
+  save_all: false
   save_last: true
   save_dir: /opt/diffusion/data_dumps/samples/${predictors.model_dir}

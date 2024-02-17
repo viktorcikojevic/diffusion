@@ -36,5 +36,6 @@ python tools/train_nn_hydra.py \
 	model.kwargs.model_channels=64 \
 	batch_size=4 \
 	apparent_batch_size=4 \
-	group_name="celeb_hq"
+	group_name="celeb_hq" \
+	val_n_imgs=8 \
 ```

@@ -59,16 +59,13 @@ def main(cfg: DictConfig):
     (save_dir / "imgs").mkdir(exist_ok=True, parents=True)
     
     # start the backward pass
-    diffusion_steps = cfg_dict["sampler"]["diffusion_steps"]
-    if diffusion_steps > num_diffusion_timesteps:
-        diffusion_steps = num_diffusion_timesteps
-    diffusion_steps_vals = np.arange(diffusion_steps)[::-1]
+    diffusion_steps_vals = np.arange(num_diffusion_timesteps)[::-1]
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     model = model.eval().to(device)
     img = torch.randn(batch_size, 3, height, width).to(device)
     
     
-    for step in tqdm(diffusion_steps_vals, total=diffusion_steps):
+    for step in tqdm(diffusion_steps_vals, total=num_diffusion_timesteps):
         timestep = torch.Tensor([step]).to(device)
         z_img = torch.randn(batch_size, 3, height, width).to(device)
         if step == 0:
