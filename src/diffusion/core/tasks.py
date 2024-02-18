@@ -192,20 +192,6 @@ class DenoisingTask(pl.LightningModule):
         
         return imgs
     
-    def normalize_images_per_batch(self, tensor):
-        # tensor shape is (b, c, h, w)
-        min_vals = tensor.view(tensor.size(0), -1).min(dim=1, keepdim=True)[0]
-        max_vals = tensor.view(tensor.size(0), -1).max(dim=1, keepdim=True)[0]
-        
-        # reshape for broadcasting
-        min_vals = min_vals.view(tensor.size(0), 1, 1, 1)
-        max_vals = max_vals.view(tensor.size(0), 1, 1, 1)
-        
-        # normalize
-        normalized_tensor = (tensor - min_vals) / (max_vals - min_vals)
-        return normalized_tensor
-    
-    
     def calculate_inception_features(self, samples):
         
         self.inception_v3.eval()
@@ -223,7 +209,7 @@ class DenoisingTask(pl.LightningModule):
         real_images = []
         collecting = True
 
-        for batch in self.val_loader:
+        for batch in self.train_loader:
             if not collecting:
                 break
             for image in batch["img"]:
@@ -235,40 +221,19 @@ class DenoisingTask(pl.LightningModule):
         fake_images = self.generate_imgs().to(self.device)
         real_images = torch.stack(real_images).to(self.device)
         
-        fake_images = self.normalize_images_per_batch(fake_images)
-        real_images = self.normalize_images_per_batch(real_images)
+        # dataset images are from -1 to 1. Convert to 0-1
+        fake_images = (fake_images + 1) / 2
+        real_images = (real_images + 1) / 2
         
-        # convert to int8
-        fake_images = (fake_images * 255).to(torch.uint8)
-        real_images = (real_images * 255).to(torch.uint8)
+        # clip to 0-1
+        fake_images = torch.clamp(fake_images, 0, 1)
+        real_images = torch.clamp(real_images, 0, 1)
         
-        fid = FrechetInceptionDistance().to(self.device)
+        fid = FrechetInceptionDistance(normalize=True).to(self.device)
         fid.update(real_images, real=True)
         fid.update(fake_images, real=False)
         fid_score = float(fid.compute())
         
-        # # generate features
-        # stacked_real_features = []
-        # for real_image in real_images:
-        #     real_features = self.calculate_inception_features(real_image)
-        #     stacked_real_features.append(real_features)
-        # stacked_real_features = (
-        #     torch.cat(stacked_real_features, dim=0).cpu().numpy()
-        # )
-        # m_real = np.mean(stacked_real_features, axis=0)
-        # s_real = np.cov(stacked_real_features, rowvar=False)
-        
-        # stacked_fake_features = []
-        # for fake_image in fake_images:
-        #     fake_features = self.calculate_inception_features(fake_image)
-        #     stacked_fake_features.append(fake_features)
-        # stacked_fake_features = (
-        #     torch.cat(stacked_fake_features, dim=0).cpu().numpy()
-        # )
-        # m_fake = np.mean(stacked_fake_features, axis=0)
-        # s_fake = np.cov(stacked_fake_features, rowvar=False)
-        
-        # fid_score = calculate_frechet_distance(m_fake, s_fake, m_real, s_real)
         
         return fid_score
         
