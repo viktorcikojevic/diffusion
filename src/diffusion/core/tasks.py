@@ -1,7 +1,6 @@
 from diffusion.core.noise_scheduler import DDPMScheduler
 from diffusion.environments.constants import PROCESSED_DATA_DIR, TMP_SUB_MMAP_DIR
 from diffusion.custom_modules.models import BaseDenoiser
-from diffusion.core.fid_evaluation import FIDEvaluation
 import pytorch_lightning as pl
 from typing import Dict, Any, List
 from torch.utils.data import DataLoader
