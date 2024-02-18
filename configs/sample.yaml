@@ -1,5 +1,6 @@
 sampler:
   batch_size: 1024
+  n_iters: 50
 
 predictors:
   model_dir: WrappedUNetModel-bs128-abs128-llr-4.8-emaTrue-2024-02-17-22-57-05-last-model
