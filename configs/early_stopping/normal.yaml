@@ -1,0 +1,5 @@
+early_stopping:
+  min_delta: 0.0
+#  patience: 3
+  patience: 200
+  verbose: true

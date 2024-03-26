@@ -1,0 +1,4 @@
+type: WrappedHOUNetModel
+kwargs:
+    version: "from_improved_ddpm_paper"
+    dim: ${dataset.kwargs.dim}
