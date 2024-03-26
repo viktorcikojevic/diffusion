@@ -39,3 +39,37 @@ python tools/train_nn_hydra.py \
 	group_name="celeb_hq" \
 	val_n_imgs=8 \
 ```
+
+# Sample images
+
+To sample images from a trained model, run the following command:
+
+
+To sample CIFAR10 images, run the following command:
+
+
+```bash
+python tools/sample.py \
+    "model_path=WrappedUNetModel-bs128-abs128-llr-4.8-emaTrue-2024-02-17-10-39-45-last-model" \
+    "dataset_name=cifar10" \
+    "n_imgs=32" \
+    "batch_size=2" \
+    output.save_all=True \
+    output.save_last=False \
+```
+
+
+
+To sample CelebA-HQ images, run the following command:
+
+
+
+```bash
+python tools/sample.py \
+    "model_path=WrappedUNetModel-bs4-abs4-llr-4.5-emaTrue-2024-02-16-10-53-52-last-model" \
+    "dataset_name=celeb_hq" \
+    "n_imgs=32" \
+    "batch_size=2" \
+    output.save_all=True \
+    output.save_last=False
+```

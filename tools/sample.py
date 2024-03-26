@@ -23,10 +23,12 @@ from diffusion.core.dataset_factory import build_train_val_dataloaders
 @hydra.main(config_path="../configs", config_name="sample", version_base="1.2")
 def main(cfg: DictConfig):
     
+    
     cfg_dict: Dict = OmegaConf.to_container(cfg, resolve=True)
+    print(cfg_dict)
     
     # prepare the model
-    model_dir = Path(cfg_dict["predictors"]["model_dir"])
+    model_dir = Path(cfg_dict["model_path"])
     model_dir = MODEL_OUT_DIR / model_dir
     cfg, model = load_model_from_dir(model_dir)
     
@@ -46,8 +48,9 @@ def main(cfg: DictConfig):
     # prepare the output directory
     save_dir = Path(cfg_dict["output"]["save_dir"])
     save_all = cfg_dict["output"]["save_all"]
+    convert_to_gif = cfg_dict["output"]["convert_to_gif"]
     save_last = cfg_dict["output"]["save_last"]
-    batch_size = cfg_dict["sampler"]["batch_size"]
+    batch_size = cfg_dict["batch_size"]
     
     existing_dirs = list(save_dir.glob("*"))
     if len(existing_dirs) > 0:
@@ -63,9 +66,9 @@ def main(cfg: DictConfig):
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     model = model.eval().to(device)
     
-    n_iters = cfg_dict["sampler"]["n_iters"]
-    for iter_num in range(n_iters):
-        print(f"Starting iteration {iter_num + 1} of {n_iters}")
+    n_imgs = cfg_dict["n_imgs"]
+    for iter_num in range(n_imgs):
+        print(f"Starting iteration {iter_num + 1} of {n_imgs}")
         
         img = torch.randn(batch_size, 3, height, width).to(device)
         
@@ -88,11 +91,17 @@ def main(cfg: DictConfig):
             if save_all:
                 img_np = img.squeeze().cpu().numpy()
                 # convert to pil and save
-                img_np = 255 * (img_np - img_np.min()) / (img_np.max() - img_np.min())
-                img_np = np.transpose(img_np, (1, 2, 0))
-                img_pil = Image.fromarray(np.uint8(img_np))
-                step_process = diffusion_steps - step
-                img_pil.save(save_dir / "imgs" / f"step_{step_process}_{iter_num}.png")
+                img_np = 255 * (img_np - np.min(img_np, axis=(1, 2, 3), keepdims=True)) / (np.max(img_np, axis=(1, 2, 3), keepdims=True) - np.min(img_np, axis=(1, 2, 3), keepdims=True))
+                
+                for img_idx in range(img_np.shape[0]):
+                    img_np_t = np.transpose(img_np[img_idx], (1, 2, 0))
+                    img_pil = Image.fromarray(np.uint8(img_np_t))
+                    # if save_dir / f"iter_num_{img_idx}" doesn not exist, create it
+                    if not (save_dir / f"iter_num_{iter_num}_{img_idx}").exists():
+                        (save_dir / f"iter_num_{iter_num}_{img_idx}").mkdir(exist_ok=True, parents=True)
+                    img_pil.save(save_dir / f"iter_num_{iter_num}_{img_idx}" / f"output_{step}.png")
+                    
+                    
             if save_last:
                 if step == 0:
                     img_np = img.cpu().numpy()
@@ -105,7 +114,7 @@ def main(cfg: DictConfig):
                         img_pil.save(save_dir / f"output_{img_idx}_{iter_num}.png")
                 
                 
-        if save_all:
+        if save_all and convert_to_gif:
             # convert all the images to a gif
             # Ensure the images are sorted by their step number
             img_paths = sorted((save_dir / "imgs").glob("*.png"), key=lambda x: int(x.stem.split('_')[1]))

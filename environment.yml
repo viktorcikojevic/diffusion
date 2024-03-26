@@ -39,3 +39,6 @@ dependencies:
     - torchvision
     - pytorch_toolbelt
     - torcheval
+    - moviepy
+    - segmentation_models_pytorch
+    - einops

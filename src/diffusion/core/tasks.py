@@ -14,9 +14,7 @@ from torchvision.utils import save_image
 from torchmetrics.image.fid import FrechetInceptionDistance
 from tqdm import tqdm 
 from einops import rearrange, repeat
-from pytorch_fid.inception import InceptionV3
 from torch.nn.functional import adaptive_avg_pool2d
-from pytorch_fid.fid_score import calculate_frechet_distance
 
 class EMA(nn.Module):
     def __init__(self, model, momentum=0.00001):
@@ -83,9 +81,6 @@ class DenoisingTask(pl.LightningModule):
         self.height, self.width = train_loader.dataset.dataset.img_width_height
         self.batch_size = train_loader.batch_size
         
-        inception_block_idx = 2048
-        block_idx = InceptionV3.BLOCK_INDEX_BY_DIM[inception_block_idx]
-        self.inception_v3 = InceptionV3([block_idx]).to(self.device)
         
         
     def generate_noise(self, img: torch.Tensor, time: int) -> torch.Tensor:
@@ -191,17 +186,6 @@ class DenoisingTask(pl.LightningModule):
         
         return imgs
     
-    def calculate_inception_features(self, samples):
-        
-        self.inception_v3.eval()
-        self.inception_v3 = self.inception_v3.to(self.device)
-        
-        features = self.inception_v3(samples.unsqueeze(0).float())[0]
-
-        if features.size(2) != 1 or features.size(3) != 1:
-            features = adaptive_avg_pool2d(features, output_size=(1, 1))
-        features = rearrange(features, "... 1 1 -> ...")
-        return features
     
     def calculate_fid_score(self):
         
