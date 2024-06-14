@@ -1,0 +1,11 @@
+_target_: diffusion.models.unet.UNetModel
+in_channels: 3
+model_channels: 32
+out_channels: 3
+num_res_blocks: 2
+dropout: 0.3
+attention_resolutions: [4, 8]
+channel_mult: [1, 2, 4, 8, 8]
+
+img_key: ${noise_scheduler.img_noised_key}
+timesteps_key: ${noise_scheduler.timesteps_key}

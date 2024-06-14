@@ -1,3 +1,5 @@
-type: "DenoisingTask"
-kwargs:
-  ema_momentum: 0.0001
+_target_: diffusion.core.tasks.DenoisingTask
+optimizer_spec: ${optimizer}
+ema_momentum: null
+scheduler_specs: ${scheduler}
+noise_key: ${noise_scheduler.noise_output_key}

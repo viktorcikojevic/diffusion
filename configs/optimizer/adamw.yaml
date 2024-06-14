@@ -1,4 +1,3 @@
-type: "AdamW"
-log_lr: -4.5 # sets lr = 10^{-log_lr}. If ls is not null, then it is used instead of log_lr
-kwargs:
-  lr: null
+_target_: torch.optim.AdamW
+_partial_: true
+lr: 3e-4

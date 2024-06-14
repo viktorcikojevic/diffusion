@@ -1,45 +1,52 @@
 defaults:
   - _self_
-  - model: unet_ddpm_cifar10  
-  - augmentation: noop
-  - early_stopping: normal
-  - scheduler: none
-  - optimizer: adam
+  - model: unet_small
   - task: denoise
+  - noise_scheduler: linear_1k
   - dataset: cifar10
-  - override hydra/sweeper: optuna
-  - override hydra/sweeper/sampler: tpe
+  - fold: cifar10_fold
+  - optimizer: adamw
+  - logger: wandb
+  - lr_scheduler: cosine_with_warmup
+
+compile_model: false
+load_from_ckpt_path: null
+
+# model checkpoint callback
+model_checkpoint:
+  monitor: "val_loss"
+  mode: "min"
+  save_top_k: 10
 
 
-val_check_interval: 20000 # check validation loss every `val_check_interval` steps
-val_check_epochs: 50 # check fid score every `val_check_epochs` epochs
-val_n_imgs: 128
-batch_size: 128 # final batch size.
-apparent_batch_size: 128 # batch size during training
-num_workers: 1 # number of workers for data loading
-dry_logger: false # if true, will not log to wandb
-exp_name: "ddpm_reproduce" # name of the experiment    
-group_name: "first_run"  # maybe this would be useful for grouping experiments when we do hyperparameter search
-max_epochs: 2000
-max_steps: -1
-early_stopping_metric: "val_loss"
+# Dataloaders
+train_dataloader_kwargs:
+  batch_size: 128
+  shuffle: true
+  num_workers: 2
+  pin_memory: false
+  persistent_workers: true
+
+val_dataloader_kwargs:
+  batch_size: 32
+  shuffle: false
+  num_workers: 2
+#  pin_memory: true
+  pin_memory: false
+  persistent_workers: true
 
 
-
-train_pct: 0.95   # Percentage of the dataset to use for training
-
-noise_scheduler:
-  kwargs:
-    num_diffusion_timesteps: 1000     # Number of diffusion steps
-    noise_scheduler: "linear"
-
-hydra:
-  sweeper:
-    sampler:
-      seed: 1337
-    direction: maximize
-    storage: null
-    n_trials: 100
-    n_jobs: 1
-    params:
-      dataset.kwargs.p_random_3d_rotation: range(0.0, 1.0, 0.1)
+# Trainer
+trainer_kwargs:
+  accumulate_grad_batches: 1
+  gradient_clip_val: 1.0
+  gradient_clip_algorithm: norm
+  # precision: "bf16-mixed" # weights in float32, activations in bfloat16
+  benchmark: true
+  log_every_n_steps: 20
+  max_epochs: 100
+  val_check_interval: null
+  num_sanity_val_steps: 1
+  accelerator: "gpu"
+  devices: -1
+  detect_anomaly: true

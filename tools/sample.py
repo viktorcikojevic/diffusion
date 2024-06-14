@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 from moviepy.editor import ImageSequenceClip
 
 
-from diffusion.environments.constants import MODEL_OUT_DIR, PRETRAINED_DIR
+from diffusion.envs.constants import MODEL_OUT_DIR, PRETRAINED_DIR
 from diffusion.core.tasks import DenoisingTask
 import diffusion.core.dataset as datasets
 from diffusion.custom_modules.models.base_model import BaseDenoiser
