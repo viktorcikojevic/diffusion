@@ -1,3 +1,0 @@
-type: CelebHQDataset
-kwargs:
-  dim: 256

@@ -1,3 +1,2 @@
-type: CIFAR10DiffusionDataset
-kwargs:
-  dim: 32
+_target_: diffusion.datasets.cifar10_dataset.CIFAR10DiffusionDataset
+img_key: image

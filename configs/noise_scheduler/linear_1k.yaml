@@ -1,0 +1,9 @@
+_target_: diffusion.core.noise_scheduler.DDPMScheduler
+num_diffusion_timesteps: 1000
+scheduler_type: linear
+
+# keys
+img_key: ${dataset.img_key}
+img_noised_key: img_noised
+noise_output_key: noise
+timesteps_key : timesteps

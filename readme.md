@@ -5,19 +5,26 @@
 Paper: https://arxiv.org/abs/2006.11239
 
 
-## Installation
+## Setup
 
-Create a conda environment with the following command:
+- Create a conda environment with the following command:
 
 ```bash
-conda env create -f environment.yml
+conda env create -f environment.yml python=3.10
 ```
 
-You also need to set up the environment variables in [src/diffusion/environments/environments.py](src/diffusion/environments/environments.py).
 
+- Download the CIFAR10 dataset using the [notebooks/download-and-explore-dataset.ipynb](notebooks/download-and-explore-dataset.ipynb). 
 
+- Set the env in [diffusion/environments/environments.py](diffusion/environments/environments.py), which should look something like this
 
-Download the Celeb HQ from https://www.kaggle.com/datasets/badasstechie/celebahq-resized-256x256
+```text
+DATA_DIR="/home/viktor/Documents/diffusion/data" # where you'll store the cifar10 dataset
+DATA_DUMPS_DIR = "/opt/diffusion/data_dumps" # where you'll store the processed data
+MODEL_OUT_DIR=f"{DATA_DUMPS_DIR}/models" # where you'll store the trained models
+```
+
+- 
 
 
 # Train
@@ -25,20 +32,9 @@ Download the Celeb HQ from https://www.kaggle.com/datasets/badasstechie/celebahq
 
 To train a CIFAR10 model, run the following command:
 ```bash
-python tools/train_nn_hydra.py
+python tools/train.py
 ```
 
-To train a CelebA-HQ model, run the following command:
-```bash
-python tools/train_nn_hydra.py \
-	dataset=celeb_hq \
-	model.kwargs.attention_resolutions.0=16 \
-	model.kwargs.model_channels=64 \
-	batch_size=4 \
-	apparent_batch_size=4 \
-	group_name="celeb_hq" \
-	val_n_imgs=8 \
-```
 
 # Sample images
 

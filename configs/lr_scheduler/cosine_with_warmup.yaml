@@ -1,0 +1,17 @@
+# @package _global_
+
+warmup_iters: 200
+scheduler:
+  milestones:
+    - ${warmup_iters}  # when to switch schedulers
+  schedulers:
+    - _target_: torch.optim.lr_scheduler.LinearLR
+      _partial_: true
+      start_factor: 0.01
+      end_factor: 1.0
+      total_iters: ${warmup_iters}
+    - _target_: torch.optim.lr_scheduler.CosineAnnealingLR
+      _partial_: true
+      T_max: 70000
+      eta_min: 0
+

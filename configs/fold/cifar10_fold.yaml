@@ -1,0 +1,2 @@
+shuffle_seed: 42
+train_pct: 0.8
