@@ -44,7 +44,7 @@ trainer_kwargs:
   # precision: "bf16-mixed" # weights in float32, activations in bfloat16
   benchmark: true
   log_every_n_steps: 20
-  max_epochs: 100
+  max_epochs: 300
   val_check_interval: null
   num_sanity_val_steps: 1
   accelerator: "gpu"
