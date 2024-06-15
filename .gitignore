@@ -18,4 +18,5 @@ multirun/
 debug.ipynb
 *.bin
 results/*
-samples/*
+samples/all_samples
+samples/final_sample
