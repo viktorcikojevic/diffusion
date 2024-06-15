@@ -1,6 +1,6 @@
 
 
-# Implementation of the original diffusion paper
+# Implementation of the original diffusion paper on the CIFAR10 dataset
 
 Paper: https://arxiv.org/abs/2006.11239
 
@@ -36,36 +36,23 @@ python tools/train.py
 ```
 
 
+Here's the train/val curves
+![alt text](assets/image.jpg)
+
+
 # Sample images
 
-To sample images from a trained model, run the following command:
-
-
-To sample CIFAR10 images, run the following command:
-
+Once you have the model trained, you can generate samples using the following command:
 
 ```bash
-python tools/sample.py \
-    "model_path=WrappedUNetModel-bs128-abs128-llr-4.8-emaTrue-2024-02-17-10-39-45-last-model" \
-    "dataset_name=cifar10" \
-    "n_imgs=32" \
-    "batch_size=2" \
-    output.save_all=True \
-    output.save_last=False \
+python tools/sample.py --experiment_name <experiment_name> --num_timesteps 1000
 ```
+to get the experiment nam. You can check the `MODEL_OUT_DIR` directory, which should have the experiment name as a subdirectory. If you enabled the wandb, just copy the experiment name from the wandb dashboard.
 
 
-
-To sample CelebA-HQ images, run the following command:
-
+# Visualization
 
 
-```bash
-python tools/sample.py \
-    "model_path=WrappedUNetModel-bs4-abs4-llr-4.5-emaTrue-2024-02-16-10-53-52-last-model" \
-    "dataset_name=celeb_hq" \
-    "n_imgs=32" \
-    "batch_size=2" \
-    output.save_all=True \
-    output.save_last=False
-```
+<p align="center">
+  <img src="samples/evolution.gif" width="1200" />
+</p>

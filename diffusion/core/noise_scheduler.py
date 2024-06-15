@@ -85,6 +85,7 @@ class DDPMScheduler():
         self.alpha_t_bar = torch.from_numpy(self.alpha_t_bar)
         self.alpha_t_bar_sqrt = self.alpha_t_bar.sqrt()
         self.one_minus_alpha_t_bar_sqrt = (1-self.alpha_t_bar).sqrt()
+        self.sigma_t = torch.from_numpy(self.sigma_t)
         # send to device
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self._send_to_device(device)
@@ -95,6 +96,7 @@ class DDPMScheduler():
         self.alpha_t_bar = self.alpha_t_bar.to(device)
         self.alpha_t_bar_sqrt = self.alpha_t_bar_sqrt.to(device)
         self.one_minus_alpha_t_bar_sqrt = self.one_minus_alpha_t_bar_sqrt.to(device)    
+        self.sigma_t = self.sigma_t.to(device)
     
     def sample_forward_process(self, batch: dict) -> dict:
         
@@ -116,3 +118,28 @@ class DDPMScheduler():
         batch[self.img_noised_key] = img_noised
             
         return batch
+    
+    
+    def get_xt_minus_one(self, x_t: torch.Tensor, noise_pred: torch.Tensor, timesteps: torch.Tensor) -> torch.Tensor:
+        """
+        Get x_{t-1} from x_t and t
+        """
+        
+        alpha_t = self.alpha_t[timesteps]
+        alpha_t_bar = self.alpha_t_bar[timesteps]
+        
+        c1 = 1 / alpha_t.sqrt().view(-1, 1, 1, 1)
+        c2 = ((1 - alpha_t) / (1 - alpha_t_bar).sqrt()).view(-1, 1, 1, 1)
+        
+        x_t_minus_one = c1 * (x_t - c2 * noise_pred)
+        
+        if not torch.all(timesteps == 0):
+            random_z = torch.randn_like(x_t, device=x_t.device)
+            random_term = self.sigma_t[timesteps].view(-1, 1, 1, 1) * random_z
+            x_t_minus_one = x_t_minus_one + random_term
+        
+        return x_t_minus_one
+        
+        
+        
+        

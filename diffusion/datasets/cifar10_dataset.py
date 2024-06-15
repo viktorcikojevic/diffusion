@@ -35,7 +35,13 @@ class CIFAR10DiffusionDataset(CIFAR10):
             idxs = idxs[:int(train_pct * len(idxs))]
             
         self.data = self.data[idxs]
+        self.img_height, self.img_width = self._get_height_width()
+        self.n_channels = 3
         
+    def _get_height_width(self):
+        img = self.data[0]
+        return img.shape[:2]
+
     def __len__(self):
         return len(self.data)
 

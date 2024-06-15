@@ -12,6 +12,6 @@ scheduler:
       total_iters: ${warmup_iters}
     - _target_: torch.optim.lr_scheduler.CosineAnnealingLR
       _partial_: true
-      T_max: 70000
+      T_max: 700000
       eta_min: 0
 
